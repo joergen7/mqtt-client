@@ -21,9 +21,9 @@ jobs:
           distribution: full
           variant: ${{ matrix.racket-variant }}
           version: ${{ matrix.racket-version }}
-      - name: Installing rmq and its dependencies
-        run: raco pkg install --no-docs --auto --name rmq
-      - name: Compiling rmq and building its docs
-        run: raco setup --check-pkg-deps --unused-pkg-deps rmq
-      - name: Testing rmq
-        run: raco test -x -p rmq
+      - name: Installing mqtt-client and its dependencies
+        run: raco pkg install --no-docs --auto --name mqtt-client
+      - name: Compiling mqtt-client and building its docs
+        run: raco setup --check-pkg-deps --unused-pkg-deps mqtt-client
+      - name: Testing mqtt-client
+        run: raco test -x -p mqtt-client
