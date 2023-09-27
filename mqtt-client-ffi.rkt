@@ -42,12 +42,14 @@
 
 
 (provide mqtt/will-options
-         (rename-out [will-options-topicName mqtt/will-options-topic]
+         (rename-out [will-options?          mqtt/will-options?]
+                     [will-options-topicName mqtt/will-options-topic]
                      [will-options-message   mqtt/will-options-payload]
                      [will-options-retained  mqtt/will-options-retained]
                      [will-options-qos       matt/will-options-qos])
          mqtt/connect-options
-         (rename-out [connect-options-keepAliveInterval mqtt/connect-options-keep-alive-interval]
+         (rename-out [connect-options?                  mqtt/connect-options?]
+                     [connect-options-keepAliveInterval mqtt/connect-options-keep-alive-interval]
                      [connect-options-cleansession      mqtt/connect-options-clean-session]
                      [connect-options-reliable          mqtt/connect-options-reliable]
                      [connect-options-will              mqtt/connect-options-will]
@@ -55,12 +57,12 @@
                      [connect-options-connectTimeout    mqtt/connect-options-connect-timeout]
                      [connect-options-retryInterval     mqtt/connect-options-retry-interval])
          mqtt/message
-         (rename-out [message-payload  mqtt/message-payload]
+         (rename-out [message?         mqtt/message?]
+                     [message-payload  mqtt/message-payload]
                      [message-qos      mqtt/message-qos]
                      [message-retained mqtt/message-retained]
                      [message-dup      mqtt/message-dup])
-         mqtt/create-inmem
-         mqtt/create-fs
+         mqtt/create
          mqtt/destroy
          mqtt/connect
          mqtt/disconnect
@@ -68,7 +70,8 @@
          mqtt/wait-for-completion
          mqtt/subscribe
          mqtt/yield
-         mqtt/receive)
+         mqtt/receive
+         mqtt/error)
 
 
 ;;============================================================
@@ -78,28 +81,28 @@
 (struct exn:fail:mqtt exn:fail (who)
   #:transparent)
 
-(define-syntax (mqtt-error stx)
+(define-syntax (mqtt/error stx)
   (syntax-parse stx
     [(_ who reason) #'(raise (exn:fail:mqtt reason (current-continuation-marks) who))]))
 
 (define/match (check v who)
   [(0   _)   (void)]
-  [(-1  who) (mqtt-error who "failure")]
-  [(-2  who) (mqtt-error who "persistence error")]
-  [(-3  who) (mqtt-error who "disconnected")]
-  [(-4  who) (mqtt-error who "maximum messages in flight")]
-  [(-5  who) (mqtt-error who "bad UTF-8 string")]
-  [(-6  who) (mqtt-error who "null parameter")]
-  [(-7  who) (mqtt-error who "topicname truncated")]
-  [(-8  who) (mqtt-error who "bad-structure")]
-  [(-9  who) (mqtt-error who "bad QOS")]
-  [(-10 who) (mqtt-error who "SSL not supported")]
-  [(-11 who) (mqtt-error who "bad MQTT version")]
-  [(-14 who) (mqtt-error who "bad protocol")]
-  [(-15 who) (mqtt-error who "bad MQTT option")]
-  [(-16 who) (mqtt-error who "wrong MQTT version")]
-  [(-17 who) (mqtt-error who "0-length will topic")]
-  [((? exact-integer? n) who) (mqtt-error who (number->string n))])
+  [(-1  who) (mqtt/error who "failure")]
+  [(-2  who) (mqtt/error who "persistence error")]
+  [(-3  who) (mqtt/error who "disconnected")]
+  [(-4  who) (mqtt/error who "maximum messages in flight")]
+  [(-5  who) (mqtt/error who "bad UTF-8 string")]
+  [(-6  who) (mqtt/error who "null parameter")]
+  [(-7  who) (mqtt/error who "topicname truncated")]
+  [(-8  who) (mqtt/error who "bad-structure")]
+  [(-9  who) (mqtt/error who "bad QOS")]
+  [(-10 who) (mqtt/error who "SSL not supported")]
+  [(-11 who) (mqtt/error who "bad MQTT version")]
+  [(-14 who) (mqtt/error who "bad protocol")]
+  [(-15 who) (mqtt/error who "bad MQTT option")]
+  [(-16 who) (mqtt/error who "wrong MQTT version")]
+  [(-17 who) (mqtt/error who "0-length will topic")]
+  [((? exact-integer? n) who) (mqtt/error who (number->string n))])
 
 
 
@@ -319,7 +322,7 @@
   #:wrap (deallocator))
 
 
-(define-mqtt-client MQTTClient_create
+(define-mqtt-client mqtt/create
   (_fun (handle : (_ptr o _mqtt-client-pointer)) ; handle
         _string/utf-8                            ; serverURI
         _string/utf-8                            ; clientId
@@ -329,16 +332,10 @@
         -> (begin
              (check r 'mqtt/create)
              handle))
+  #:c-id MQTTClient_create
   #:wrap (allocator mqtt/destroy))
 
-(define (mqtt/create-inmem server-uri client-id)
-  (MQTTClient_create server-uri client-id 'persistence-none #f))
 
-(define (mqtt/create-fs
-         server-uri
-         client-id
-         #:persist-dir [persist-dir #f])
-  (MQTTClient_create server-uri client-id 'persistence-default persist-dir))
 
 
 
@@ -375,6 +372,8 @@
         -> (r : _int)
         -> (check r 'mqtt/wait-for-completion))
   #:c-id MQTTClient_waitForCompletion)
+
+
 
 
 (define-mqtt-client MQTTClient_subscribe
