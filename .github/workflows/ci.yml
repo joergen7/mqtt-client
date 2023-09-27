@@ -21,6 +21,8 @@ jobs:
           distribution: full
           variant: ${{ matrix.racket-variant }}
           version: ${{ matrix.racket-version }}
+      - name: Installing paho.mqtt.c
+        run: apt-get install -y libpaho-mqtt1.3
       - name: Installing mqtt-client and its dependencies
         run: raco pkg install --no-docs --auto --name mqtt-client
       - name: Compiling mqtt-client and building its docs

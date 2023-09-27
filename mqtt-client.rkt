@@ -41,7 +41,19 @@
   
 
 
-(provide mqtt/connect-options
+(provide mqtt/will-options
+         (rename-out [will-options-topicName mqtt/will-options-topic]
+                     [will-options-message   mqtt/will-options-payload]
+                     [will-options-retained  mqtt/will-options-retained]
+                     [will-options-qos       matt/will-options-qos])
+         mqtt/connect-options
+         (rename-out [connect-options-keepAliveInterval mqtt/connect-options-keep-alive-interval]
+                     [connect-options-cleansession      mqtt/connect-options-clean-session]
+                     [connect-options-reliable          mqtt/connect-options-reliable]
+                     [connect-options-will              mqtt/connect-options-will]
+                     [connect-options-username          mqtt/connect-options-username]
+                     [connect-options-connectTimeout    mqtt/connect-options-connect-timeout]
+                     [connect-options-retryInterval     mqtt/connect-options-retry-interval])
          mqtt/message
          (rename-out [message-payload  mqtt/message-payload]
                      [message-qos      mqtt/message-qos]
@@ -95,15 +107,14 @@
 ;; Data Types
 ;;============================================================
 
-(define _mqtt-client-pointer         (_cpointer 'mqtt-client))
-(define _delivery-token-pointer      (_cpointer 'delivery-token))
-(define _will-options-pointer        (_cpointer/null 'will-options))
-(define _ssl-options-pointer         (_cpointer/null 'ssl-options))
-(define _name-value-pointer          (_cpointer/null 'name-value))
-(define _data-pointer                (_cpointer/null 'data))
-(define _persistence-context-pointer (_cpointer/null 'persistence-context))
-(define _server-uris-pointer         (_cpointer/null 'server-uris))
-(define _mqtt-property-pointer       (_cpointer/null 'mqtt-property))
+(define _mqtt-client-pointer              (_cpointer 'mqtt-client))
+(define _delivery-token-pointer           (_cpointer 'delivery-token))
+(define _ssl-options-pointer/null         (_cpointer/null 'ssl-options))
+(define _name-value-pointer/null          (_cpointer/null 'name-value))
+(define _data-pointer/null                (_cpointer/null 'data))
+(define _persistence-context-pointer/null (_cpointer/null 'persistence-context))
+(define _server-uris-pointer/null         (_cpointer/null 'server-uris))
+(define _mqtt-property-pointer/null       (_cpointer/null 'mqtt-property))
 
 (define _persistence-type
   (_enum '(persistence-default
@@ -125,6 +136,42 @@
   (_array/list _byte 4))
 
 
+;; payload
+;;------------------------------------------------------------
+
+(define-cstruct _payload
+  ([len  _int]
+   [data _data-pointer/null]))
+  
+
+
+;; will
+;;------------------------------------------------------------
+
+(define-cstruct _will-options
+  ([struct_id      _struct-id]
+   [struct_version _int]
+   [topicName      _string/utf-8]
+   [message        _string/utf-8]
+   [retained       _bool]
+   [qos            _qos]
+   [payload        _payload]))
+
+(define (mqtt/will-options
+         topic
+         message
+         #:retained [retained #f]
+         #:qos      [qos 'qos-0])
+  (make-will-options
+   (map char->integer '(#\M #\Q #\T #\W))
+   1
+   topic
+   message
+   retained
+   qos
+   (make-payload 0 #f)))
+
+
 ;; returned
 ;;------------------------------------------------------------
 
@@ -138,7 +185,7 @@
 
 (define-cstruct _binarypwd
   ([len  _int]
-   [data _data-pointer]))
+   [data _data-pointer/null]))
   
 ;; connect-options
 ;;------------------------------------------------------------
@@ -149,25 +196,24 @@
    [keepAliveInterval   _int]
    [cleansession        _bool]
    [reliable            _int]
-   [will                _will-options-pointer]
+   [will                _will-options-pointer/null]
    [username            _string/utf-8]
    [password            _string/utf-8]
    [connectTimeout      _int]
    [retryInterval       _int]
-   [ssl                 _ssl-options-pointer]
+   [ssl                 _ssl-options-pointer/null]
    [serverURIcount      _int]
-   [serverURIs          _server-uris-pointer]
+   [serverURIs          _server-uris-pointer/null]
    [MQTTVersion         _mqtt-version]
    [returned            _returned]
    [binarypwd           _binarypwd]
    [maxInflightMessages _int]
    [cleanstart          _bool]
-   [httpHeaders         _name-value-pointer]
+   [httpHeaders         _name-value-pointer/null]
    [httpProxy           _string/utf-8]
    [httpsProxy          _string/utf-8]))
 
 (define (mqtt/connect-options
-         #:struct-version        [struct-version         8]
          #:keep-alive-interval   [keep-alive-interval   60] ; time [s]
          #:clean-session         [clean-session         #t]
          #:reliable              [reliable               1]
@@ -187,8 +233,8 @@
          #:http-proxy            [http-proxy            #f]
          #:https-proxy           [https-proxy           #f])
   (make-connect-options
-   (map char->integer '(#\M #\Q #\T #\C))
-   struct-version
+   (map char->integer '(#\M #\Q #\T #\C)) ; eyecatcher is fixed
+   8                                      ; struct-version is fixed
    keep-alive-interval
    clean-session
    reliable
@@ -201,7 +247,7 @@
    server-uri-count
    server-uris
    mqtt-version
-   (make-returned #f 0 0) 
+   (make-returned #f 0 0)                 ; server sets returned
    binarypwd
    max-inflight-messages
    clean-start
@@ -217,7 +263,7 @@
   ([count     _int]
    [max_count _int]
    [length    _int]
-   [array     _mqtt-property-pointer]))
+   [array     _mqtt-property-pointer/null]))
 
 (define (create-mqtt-properties
          #:count     [count      0]
@@ -242,13 +288,12 @@
 
 (define (mqtt/message
          payload
-         #:struct-version [struct-version 1]
          #:qos            [qos            'qos-0]
          #:retained       [retained       #f]
          #:properties     [properties     (create-mqtt-properties)])
   (make-message
-   (map char->integer '(#\M #\Q #\T #\M)) ; eyecatcher must be fixed
-   struct-version
+   (map char->integer '(#\M #\Q #\T #\M)) ; eyecatcher is fixed
+   1                                      ; struct-version is fixed
    (string-length payload)
    payload
    qos
@@ -279,7 +324,7 @@
         _string/utf-8                            ; serverURI
         _string/utf-8                            ; clientId
         _persistence-type                        ; persistence_type
-        _persistence-context-pointer             ; persistence_context
+        _persistence-context-pointer/null        ; persistence_context
         -> (r : _int)
         -> (begin
              (check r 'mqtt/create)
