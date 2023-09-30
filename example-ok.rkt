@@ -12,41 +12,41 @@
 
 ;; create MQTT client context
 (define client
-  (mqtt/create-inmem server-uri client-id))
+  (MQTTClient_create server-uri client-id 'persistence-none #f))
 
 ;; define connection options
 (define conn-opts
-  (mqtt/connect-options #:keep-alive-interval 20 #:clean-session #t))
+  (create-connect-options #:keep-alive-interval 20 #:clean-session #t))
 
 ;; connect to MQTT provider using connection options
-(mqtt/connect client conn-opts)
+(MQTTClient_connect client conn-opts)
 
 ;; subscribe to topic
-(mqtt/subscribe client topic)
+(MQTTClient_subscribe client topic 'qos-2)
 
 ;; define message to publish
 (define pub-msg
-  (mqtt/message payload #:qos 'qos-1 #:retained #f))
+  (create-message payload #:qos 'qos-1 #:retained #f))
 
 ;; publish message
 (define dt
-  (mqtt/publish-message client topic pub-msg))
+  (MQTTClient_publishMessage client topic pub-msg))
 
 ;; wait for completion
-(mqtt/wait-for-completion client dt timeout)
+(MQTTClient_waitForCompletion client dt timeout)
 
 ;; attempt to receive message
 (define-values (recv-msg recv-topic)
-  (mqtt/receive client timeout))
+  (MQTTClient_receive client timeout))
 
 ;; print the received message if possible
 (when recv-msg
   (displayln recv-topic)
-  (displayln (mqtt/message-payload recv-msg))
-  (displayln (mqtt/message-qos recv-msg)))
+  (displayln (message-payload recv-msg))
+  (displayln (message-qos recv-msg)))
 
 ;; drop connection
-(mqtt/disconnect client timeout)
+(MQTTClient_disconnect client timeout)
 
 ;; drop client context
-(mqtt/destroy client)
+(MQTTClient_destroy client)

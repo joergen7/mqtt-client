@@ -6,103 +6,62 @@
 ;;============================================================
 
 (require
-
-  (for-syntax (only-in syntax/parse
-                       syntax-parse)
-              (only-in racket/base
-                       syntax))
+  (for-syntax syntax/parse
+              racket/base)
+  ffi/unsafe  
+  ffi/unsafe/define
+  ffi/unsafe/alloc
+  racket/match)
   
-  (only-in ffi/unsafe
-           _cpointer
-           _cpointer/null
-           _enum
-           _array/list
-           _byte
-           _string/utf-8
-           _int
-           _bool
-           _fun
-           _ptr
-           _void
-           _ulong
-           cpointer?
-           define-cstruct
-           ffi-lib)
-  
-  (only-in ffi/unsafe/define
-           define-ffi-definer)
-  
-  (only-in ffi/unsafe/alloc
-           allocator
-           deallocator)
-  
-  (only-in racket/match
-           define/match))
-  
-
-
-(provide mqtt/will-options
-         (rename-out [will-options?          mqtt/will-options?]
-                     [will-options-topicName mqtt/will-options-topic]
-                     [will-options-message   mqtt/will-options-payload]
-                     [will-options-retained  mqtt/will-options-retained]
-                     [will-options-qos       matt/will-options-qos])
-         mqtt/connect-options
-         (rename-out [connect-options?                  mqtt/connect-options?]
-                     [connect-options-keepAliveInterval mqtt/connect-options-keep-alive-interval]
-                     [connect-options-cleansession      mqtt/connect-options-clean-session]
-                     [connect-options-reliable          mqtt/connect-options-reliable]
-                     [connect-options-will              mqtt/connect-options-will]
-                     [connect-options-username          mqtt/connect-options-username]
-                     [connect-options-connectTimeout    mqtt/connect-options-connect-timeout]
-                     [connect-options-retryInterval     mqtt/connect-options-retry-interval])
-         mqtt/message
-         (rename-out [message?         mqtt/message?]
-                     [message-payload  mqtt/message-payload]
-                     [message-qos      mqtt/message-qos]
-                     [message-retained mqtt/message-retained]
-                     [message-dup      mqtt/message-dup])
-         mqtt/create
-         mqtt/destroy
-         mqtt/connect
-         mqtt/disconnect
-         mqtt/publish-message
-         mqtt/wait-for-completion
-         mqtt/subscribe
-         mqtt/yield
-         mqtt/receive
-         mqtt/error)
+(provide
+ (struct-out exn:fail:mqtt)   raise-mqtt-error
+ (struct-out will-options)    create-will-options
+ (struct-out connect-options) create-connect-options
+ (struct-out message)         create-message
+ MQTTClient_destroy
+ MQTTClient_create
+ MQTTClient_connect
+ MQTTClient_disconnect
+ MQTTClient_publishMessage
+ MQTTClient_waitForCompletion
+ MQTTClient_subscribe
+ MQTTClient_yield
+ MQTTClient_receive)
 
 
 ;;============================================================
 ;; Error Handling
 ;;============================================================
 
-(struct exn:fail:mqtt exn:fail (who)
+(struct exn:fail:mqtt exn:fail ()
   #:transparent)
 
-(define-syntax (mqtt/error stx)
+(define-syntax (raise-mqtt-error stx)
   (syntax-parse stx
-    [(_ who reason) #'(raise (exn:fail:mqtt reason (current-continuation-marks) who))]))
+    [(_ who reason)
+     #'(raise
+        (exn:fail:mqtt
+         (format "~a: ~a" who reason)
+         (current-continuation-marks)))]))
 
 (define/match (check v who)
   [(0   _)   (void)]
-  [(-1  who) (mqtt/error who "failure")]
-  [(-2  who) (mqtt/error who "persistence error")]
-  [(-3  who) (mqtt/error who "disconnected")]
-  [(-4  who) (mqtt/error who "maximum messages in flight")]
-  [(-5  who) (mqtt/error who "bad UTF-8 string")]
-  [(-6  who) (mqtt/error who "null parameter")]
-  [(-7  who) (mqtt/error who "topicname truncated")]
-  [(-8  who) (mqtt/error who "bad-structure")]
-  [(-9  who) (mqtt/error who "bad QOS")]
-  [(-10 who) (mqtt/error who "SSL not supported")]
-  [(-11 who) (mqtt/error who "bad MQTT version")]
-  [(-14 who) (mqtt/error who "bad protocol")]
-  [(-15 who) (mqtt/error who "bad MQTT option")]
-  [(-16 who) (mqtt/error who "wrong MQTT version")]
-  [(-17 who) (mqtt/error who "0-length will topic")]
-  [((? exact-integer? n) who) (mqtt/error who (number->string n))])
+  [(-1  who) (raise-mqtt-error who "failure")]
+  [(-2  who) (raise-mqtt-error who "persistence error")]
+  [(-3  who) (raise-mqtt-error who "disconnected")]
+  [(-4  who) (raise-mqtt-error who "maximum messages in flight")]
+  [(-5  who) (raise-mqtt-error who "bad UTF-8 string")]
+  [(-6  who) (raise-mqtt-error who "null parameter")]
+  [(-7  who) (raise-mqtt-error who "topicname truncated")]
+  [(-8  who) (raise-mqtt-error who "bad-structure")]
+  [(-9  who) (raise-mqtt-error who "bad QOS")]
+  [(-10 who) (raise-mqtt-error who "SSL not supported")]
+  [(-11 who) (raise-mqtt-error who "bad MQTT version")]
+  [(-14 who) (raise-mqtt-error who "bad protocol")]
+  [(-15 who) (raise-mqtt-error who "bad MQTT option")]
+  [(-16 who) (raise-mqtt-error who "wrong MQTT version")]
+  [(-17 who) (raise-mqtt-error who "0-length will topic")]
+  [((? exact-integer? n) who) (raise-mqtt-error who (number->string n))])
 
 
 
@@ -160,7 +119,7 @@
    [qos            _qos]
    [payload        _payload]))
 
-(define (mqtt/will-options
+(define (create-will-options
          topic
          message
          #:retained [retained #f]
@@ -216,7 +175,7 @@
    [httpProxy           _string/utf-8]
    [httpsProxy          _string/utf-8]))
 
-(define (mqtt/connect-options
+(define (create-connect-options
          #:keep-alive-interval   [keep-alive-interval   60] ; time [s]
          #:clean-session         [clean-session         #t]
          #:reliable              [reliable               1]
@@ -289,7 +248,7 @@
    [msgid          _int]
    [properties     _mqtt-properties]))
 
-(define (mqtt/message
+(define (create-message
          payload
          #:qos            [qos            'qos-0]
          #:retained       [retained       #f]
@@ -315,14 +274,12 @@
 
 (define-ffi-definer define-mqtt-client (ffi-lib "libpaho-mqtt3c" '("1.3.9" "1" #f)))
 
-(define-mqtt-client mqtt/destroy
+(define-mqtt-client MQTTClient_destroy
   (_fun (_ptr i _mqtt-client-pointer) ; handle
         -> _void)
-  #:c-id MQTTClient_destroy
   #:wrap (deallocator))
 
-
-(define-mqtt-client mqtt/create
+(define-mqtt-client MQTTClient_create
   (_fun (handle : (_ptr o _mqtt-client-pointer)) ; handle
         _string/utf-8                            ; serverURI
         _string/utf-8                            ; clientId
@@ -332,29 +289,21 @@
         -> (begin
              (check r 'mqtt/create)
              handle))
-  #:c-id MQTTClient_create
-  #:wrap (allocator mqtt/destroy))
+  #:wrap (allocator MQTTClient_destroy))
 
-
-
-
-
-(define-mqtt-client mqtt/connect
+(define-mqtt-client MQTTClient_connect
   (_fun _mqtt-client-pointer     ; handle
         _connect-options-pointer ; options
         -> (r : _int)
-        -> (check r 'mqtt/connect))
-  #:c-id MQTTClient_connect)
+        -> (check r 'mqtt/connect)))
 
-(define-mqtt-client mqtt/disconnect
+(define-mqtt-client MQTTClient_disconnect
   (_fun _mqtt-client-pointer ; handle
         _int                 ; timeout
         -> (r : _int)
-        -> (check r 'mqtt/disconnect))
-  #:c-id MQTTClient_disconnect)
+        -> (check r 'mqtt/disconnect)))
 
-
-(define-mqtt-client mqtt/publish-message
+(define-mqtt-client MQTTClient_publishMessage
   (_fun _mqtt-client-pointer                    ; handle
         _string/utf-8                           ; topic
         _message-pointer                        ; msg
@@ -362,19 +311,14 @@
         -> (r : _int)
         -> (begin
              (check r 'mqtt/publish-message)
-             dt))
-  #:c-id MQTTClient_publishMessage)
+             dt)))
 
-(define-mqtt-client mqtt/wait-for-completion
+(define-mqtt-client MQTTClient_waitForCompletion
   (_fun _mqtt-client-pointer             ; handle
         (_ptr i _delivery-token-pointer) ; dt
         _ulong                           ; timeout
         -> (r : _int)
-        -> (check r 'mqtt/wait-for-completion))
-  #:c-id MQTTClient_waitForCompletion)
-
-
-
+        -> (check r 'mqtt/wait-for-completion)))
 
 (define-mqtt-client MQTTClient_subscribe
   (_fun _mqtt-client-pointer ; handle
@@ -383,16 +327,10 @@
         -> (r : _int)
         -> (check r 'mqtt/subscribe)))
 
-(define (mqtt/subscribe handle topic #:qos [qos 'qos-2])
-  (MQTTClient_subscribe handle topic qos))
+(define-mqtt-client MQTTClient_yield
+  (_fun -> _void))
 
-
-(define-mqtt-client mqtt/yield
-  (_fun -> _void)
-  #:c-id MQTTClient_yield)
-
-
-(define-mqtt-client mqtt/receive
+(define-mqtt-client MQTTClient_receive
   (_fun _mqtt-client-pointer                       ; handle
         (topic-name : (_ptr o _string/utf-8))      ; topic name
         (_ptr o _int)                              ; topic len
@@ -401,8 +339,7 @@
    -> (r : _int)
    -> (begin
         (check r 'mqtt/receive)
-        (values message topic-name)))
-  #:c-id MQTTClient_receive)
+        (values message topic-name))))
   
 
 

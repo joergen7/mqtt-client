@@ -6,6 +6,27 @@ Racket MQTT client implementation based on paho.mqtt.c
 
 This package provides an MQTT client implementation enabling Racket applications to exchange messages with an MQTT broker. This client implementation is based on [paho.mqtt.c](https://github.com/eclipse/paho.mqtt.c) using Racket's foreign function interface `ffi/unsafe` to wrap the synchronous MQTT library calls.
 
+## Example
+
+```racket
+#lang racket/base
+
+(require mqtt-client)
+
+(mqtt/with-client ("localhost" "client1")
+  (mqtt/with-connection ()
+  
+    (mqtt/subscribe "topic1")
+  
+    (mqtt/publish "topic1" "Hello World")
+
+    (mqtt/if-receive (topic payload)
+	  (begin
+	    (displayln topic)
+		(displayln payload))
+      (void))))
+```
+
 ## Related Work
 
 - [mosquitto-ffi](https://pkgs.racket-lang.org/package/mosquitto-ffi) An FFI binding of libmosquitto for racket
