@@ -26,7 +26,7 @@
 
 ;; define message to publish
 (define pub-msg
-  (create-message payload #:qos 'qos-1 #:retained #f))
+  (create-MQTTClient_message payload #:qos 'qos-1 #:retained #f))
 
 ;; publish message
 (define dt
@@ -42,8 +42,8 @@
 ;; print the received message if possible
 (when recv-msg
   (displayln recv-topic)
-  (displayln (message-payload recv-msg))
-  (displayln (message-qos recv-msg)))
+  (displayln (MQTTClient_message-payload recv-msg))
+  (displayln (MQTTClient_message-qos recv-msg)))
 
 ;; drop connection
 (MQTTClient_disconnect client timeout)
