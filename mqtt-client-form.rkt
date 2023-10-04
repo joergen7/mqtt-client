@@ -33,7 +33,7 @@
   (make-parameter
    #f
    (lambda (x)
-     (if (or (connect-options? x) (false? x))
+     (if (or (MQTTClient_connectOptions? x) (false? x))
          x
          (raise-mqtt-error
           'mqtt/with-connection
@@ -77,7 +77,7 @@
   (when (and (current-client) (current-connect-options))
     (MQTTClient_disconnect
      (current-client)
-     (connect-options-keepAliveInterval (current-connect-options))))
+     (MQTTClient_connectOptions-keepAliveInterval (current-connect-options))))
   (current-connect-options #f))
 
 (define-syntax (mqtt/with-client stx)
@@ -106,7 +106,7 @@
   (syntax-parse stx
     [(_ (args ...) body ...)
      #'(if (current-client)
-           (parameterize ([current-connect-options (create-connect-options args ...)])
+           (parameterize ([current-connect-options (create-MQTTClient_connectOptions args ...)])
              (with-handlers ([any/c (lambda (e) (client-disconnect) (raise e))])
                (begin0
                  (begin
@@ -119,7 +119,7 @@
 
 (define-syntax (mqtt/with-publish-qos stx)
   (syntax-parse stx
-    [(_ (qos) body ...)
+    [(_ (qos:id) body ...)
      #'(parameterize ([current-publish-qos 'qos])
          (void)
          body ...)]))
@@ -137,7 +137,7 @@
 (define (mqtt/publish topic payload #:retained [retained #f])
 
   (define msg
-    (create-message
+    (create-MQTTClient_message
      payload
      #:qos      (current-publish-qos)
      #:retained retained))
@@ -166,7 +166,7 @@
      (let ([x (gensym)])
        #`(let-values ([(#,x topic) (MQTTClient_receive (current-client) (current-timeout))])
            (if #,x
-               (let ([payload (message-payload #,x)])
+               (let ([payload (MQTTClient_message-payload #,x)])
                  (void)
                  body ...)
                ((current-default-message)))))]))

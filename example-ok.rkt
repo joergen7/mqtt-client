@@ -16,7 +16,7 @@
 
 ;; define connection options
 (define conn-opts
-  (create-connect-options #:keep-alive-interval 20 #:clean-session #t))
+  (create-MQTTClient_connectOptions #:keep-alive-interval 20 #:clean-session #t))
 
 ;; connect to MQTT provider using connection options
 (MQTTClient_connect client conn-opts)

@@ -14,17 +14,19 @@ This package provides an MQTT client implementation enabling Racket applications
 (require mqtt-client)
 
 (mqtt/with-client ("localhost" "client1")
-  (mqtt/with-connection ()
-  
-    (mqtt/subscribe "topic1")
-  
-    (mqtt/publish "topic1" "Hello World")
 
-    (mqtt/if-receive (topic payload)
-	  (begin
-	    (displayln topic)
-		(displayln payload))
-      (void))))
+  (mqtt/with-connection (#:keep-alive-interval 20
+                         #:clean-session       #t)
+
+    (mqtt/with-publish-qos (qos-1)
+                           
+      (mqtt/subscribe "some-topic")
+
+      (mqtt/publish "some-topic" "Hello world")
+
+      (mqtt/with-message-recv (topic payload)
+        (displayln topic)
+        (displayln payload)))))
 ```
 
 ## Related Work
@@ -39,7 +41,7 @@ As this MQTT client wraps a library, this library must be present in the environ
 
     sudo apt-get install -y libpaho-mqtt1.3
 	
-## MQTT Broker
+### MQTT Broker
 
 To exchange messages an MQTT broker must be available. [Eclipse Mosquitto](https://mosquitto.org/) is a popular MQTT broker. To install Eclipse Mosquitto on Ubuntu run:
 
