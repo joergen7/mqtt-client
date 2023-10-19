@@ -16,7 +16,8 @@
          mqtt/with-publish-qos
          mqtt/publish
          mqtt/subscribe
-         mqtt/with-message-recv)
+         mqtt/with-message-recv
+         mqtt/will)
 
 
 (define current-client
@@ -79,6 +80,9 @@
      (current-client)
      (MQTTClient_connectOptions-keepAliveInterval (current-connect-options))))
   (current-connect-options #f))
+
+
+(define mqtt/will create-MQTTClient_willOptions)
 
 (define-syntax (mqtt/with-client stx)
   (syntax-parse stx

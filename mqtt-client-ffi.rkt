@@ -154,7 +154,7 @@
    [struct_version      _int]
    [keepAliveInterval   _int]
    [cleansession        _bool]
-   [reliable            _int]
+   [reliable            _bool]
    [will                _MQTTClient_willOptions-pointer/null]
    [username            _string/utf-8]
    [password            _string/utf-8]
@@ -175,20 +175,15 @@
 (define (create-MQTTClient_connectOptions
          #:keep-alive-interval   [keep-alive-interval   60] ; time [s]
          #:clean-session         [clean-session         #t]
-         #:reliable              [reliable               1]
+         #:reliable              [reliable              #t]
          #:will                  [will                  #f]
          #:username              [username              #f]
          #:password              [password              #f]
          #:connect-timeout       [connect-timeout       30] ; time [s]
          #:retry-interval        [retry-interval         0] ; time [s] 0 means no retries
-         #:ssl                   [ssl                   #f]
-         #:server-uri-count      [server-uri-count       0]
-         #:server-uris           [server-uris           #f]
          #:mqtt-version          [mqtt-version          'mqtt-version-default]
-         #:binarypwd             [binarypwd             (make-binarypwd 0 #f)]
          #:max-inflight-messages [max-inflight-messages -1]
          #:clean-start           [clean-start           #f]
-         #:http-headers          [http-headers          #f]
          #:http-proxy            [http-proxy            #f]
          #:https-proxy           [https-proxy           #f])
   (make-MQTTClient_connectOptions
@@ -202,16 +197,16 @@
    password
    connect-timeout
    retry-interval
-   ssl
-   server-uri-count
-   server-uris
+   #f                                     ; ssl
+   0                                      ; server-uri-count
+   #f                                     ; server-uris
    mqtt-version
    (make-returned #f 0 0)                 ; server sets returned
-   binarypwd
+   (make-binarypwd 0 #f)                  ; binarypwd
    max-inflight-messages
    clean-start
-   http-headers
-   http\-proxy
+   #f                                     ; http-headers
+   http-proxy
    https-proxy))
 
 
