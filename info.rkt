@@ -1,6 +1,7 @@
 #lang info
 (define collection "mqtt-client")
-(define deps '("base"))
+(define deps '("base"
+               ("libpaho-mqtt3-x86_64-linux-natipkg" #:platform "x86_64-linux-natipkg")))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/mqtt-client.scrbl" ())))
 (define pkg-desc "Racket MQTT client implementation based on paho.mqtt.c")
