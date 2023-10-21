@@ -93,3 +93,10 @@ some other text
          MQTTClient_willOptions?]|{
 
 }|
+
+@defproc[(mqtt/publish [topic string?]
+                       [payload string?]
+                       [#:retained retained boolean? #f])
+         void?]|{
+}|
+                       
