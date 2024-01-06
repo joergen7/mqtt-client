@@ -2,6 +2,8 @@
 @require[@for-label[
  mqtt-client
  racket/base
+ racket/contract
+ racket/bool
  ]]
 
 @title{mqtt-client}
@@ -61,7 +63,17 @@ topic name on which the message was received and the message payload. Here, we c
 }|
 
 
-@section{MQTT API}
+@section{High-Level API}
+
+@subsection{Contracts}
+
+@defthing[qos/c contract?]|{
+}|
+
+@defthing[mqtt-version/c contract?]|{
+}|
+
+@subsection{Context Forms}
 
 @defform[(mqtt/with-client (server-uri client-id) body ...)
          #:contracts ([server-uri string?]
@@ -93,7 +105,7 @@ some text
                       [password              (or/c false? string?)]
                       [connect-timeout       exact-nonnegative-integer?]
                       [retry-interval        exact-nonnegative-integer?]
-                      [mqtt-version          (or/c 'mqtt-version-default 'mqtt-version-3-1 'mqtt-version-3-1-1 'mqtt-version-5)]
+                      [mqtt-version          mqtt-version/c]
                       [max-inflight-messages exact-integer?]
                       [clean-start           boolean?]
                       [http-proxy            (or/c false? string?)]
@@ -102,20 +114,51 @@ some text
 some other text
 }|
 
+@defform[(mqtt/with-timeout (timeout) body ...)
+         #:contracts ([timeout exact-positive-integer?]
+                      [body    any/c])]|{
+}|
 
+@defform[(mqtt/with-publish-qos (qos) body ...)
+         #:grammar ([qos
+                     (code:line qos-0)
+                     (code:line qos-1)
+                     (code:line qos-2)])
+         #:contracts ([body any/c])]|{
+}|
+
+@defform[(mqtt/with-message-recv (topic payload) body ...)
+         #:contracts ([topic   string?]
+                      [payload string?]
+                      [body    any/c])]|{
+}|
+
+@subsection{Constructors}
 
 @defproc[#:kind "constructor"
          (mqtt/will
           [topic   string?]
           [message string?]
           [#:retained retained boolean? #f]
-          [#:qos qos (or/c 'qos-0 'qos-1 'qos-2) 'qos-0])
+          [#:qos qos qos/c 'qos-2])
          MQTTClient_willOptions?]|{
 
 }|
+
+@subsection{Procedures}
 
 @defproc[(mqtt/publish [topic string?]
                        [payload string?]
                        [#:retained retained boolean? #f])
          void?]|{
 }|
+
+@defproc[(mqtt/subscribe [topic string?]
+                         [#:qos qos qos/c 'qos-2]) void?]|{
+}|
+
+
+
+
+
+@section{Low-Level API}

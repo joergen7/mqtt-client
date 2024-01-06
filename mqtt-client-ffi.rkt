@@ -11,7 +11,12 @@
   ffi/unsafe  
   ffi/unsafe/define
   ffi/unsafe/alloc
-  racket/match)
+
+  (only-in racket/match
+           define/match))
+
+
+
   
 (provide
  (struct-out exn:fail:mqtt)             raise-mqtt-error
@@ -120,7 +125,7 @@
          topic
          message
          #:retained [retained #f]
-         #:qos      [qos 'qos-0])
+         #:qos      [qos 'qos-2])
   (make-MQTTClient_willOptions
    (map char->integer '(#\M #\Q #\T #\W))
    1
@@ -242,7 +247,7 @@
 
 (define (create-MQTTClient_message
          payload
-         #:qos            [qos            'qos-0]
+         #:qos            [qos            'qos-2]
          #:retained       [retained       #f]
          #:properties     [properties     (create-MQTTProperties)])
   (make-MQTTClient_message

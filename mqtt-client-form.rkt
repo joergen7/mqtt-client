@@ -17,7 +17,9 @@
          mqtt/publish
          mqtt/subscribe
          mqtt/with-message-recv
-         mqtt/will)
+         mqtt/will
+         qos/c
+         mqtt-version/c)
 
 
 (define current-client
@@ -42,9 +44,9 @@
 
 (define current-publish-qos
   (make-parameter
-   'qos-0
+   'qos-2
    (lambda (x)
-     (if (member x '(qos-0 qos-1 qos-2))
+     (if (qos/c x)
          x
          (raise-mqtt-error
           'mqtt/with-qos
@@ -176,5 +178,8 @@
                ((current-default-message)))))]))
          
          
-  
-  
+(define qos/c
+  (or/c 'qos-0 'qos-1 'qos-2))
+
+(define mqtt-version/c
+  (or/c 'mqtt-version-default 'mqtt-version-3-1 'mqtt-version-3-1-1 'mqtt-version-5))
