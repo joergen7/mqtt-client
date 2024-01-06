@@ -1,23 +1,43 @@
 #lang scribble/manual
-@require[@for-label[mqtt-client
-                    racket/base
-                    racket/contract
-                    racket/bool]]
+@require[@for-label[
+ mqtt-client
+ racket/base
+ ]]
 
 @title{mqtt-client}
 @author{Jörgen Brandt}
 
 @defmodule[mqtt-client]
 
-This module is a Racket MQTT client implementation based on @link["https://github.com/eclipse/paho.mqtt.c"]{libpaho-mqtt3}.
+The @racketmodname[mqtt-client] module is a Racket MQTT client implementation based on @link["https://github.com/eclipse/paho.mqtt.c"]{libpaho-mqtt3}.
 It allows the user to set up an MQTT client, create a connection to MQTT message broker, subscribe to topics, and to send
-or receive messages. The module uses a C-based MQTT library that needs to reside in the operating system, the Racket
-instance runs in.
+or receive messages. The module uses a C-based, dynamically linked library that needs to reside in the operating system.
 
 @section{Example}
 
-Below, we list a simple example for the way, this module might be used. In the example, we set up a client with
-@link["MQTT_API.html#(form._((lib._mqtt-client%2Fmain..rkt)._mqtt%2Fwith-client))"]{mqtt/with-client}
+Below, we list a simple example for the way, this module might be used. To send and receive messages we set up different
+contexts, two of which are mandatory: a client context and, nested in it, a connection context. Optionally, we can change
+some parameters using contexts. Here, for example, we change the quality of service (QOS) when publishing to @racket[qos-1].
+
+First, we set up a client using @racket[mqtt/with-client]. Herein, we provide the message broker's URL, @racket["localhost"],
+and a client id, @racket["client1"], for our application.
+
+Next, we set up a connection to an MQTT message broker using @link[]{mqtt/with-connection}. All connection parameters have
+reasonable default values but, here, we set the keep-alive interval to @racket[20] seconds and request a clean session.
+
+Lastly, we set the QOS for publishing to @racket[qos-1] using @racket[mqtt/with-publish-qos]. Note, the QOS for any message an
+MQTT client receives is determined by the publisher and, thus, needs no parameterization on the client's part.
+
+Within these three nested contexts, setting up a client, a connection, and default parameters (here for the QOS), we can
+subscribe to topics, send messages, and wait for messages to be received. Here, we use @racket[mqtt/subscribe] to subscribe to
+the topic @racket["some-topic"]. We use @racket[mqtt/publish] to publish the message @racket["Hello World"]. Finally, we
+receive a message using @racket[mqtt/with-message-recv].
+
+The form @racket[mqtt/with-message-recv] creates its own context, in which two named variables are defined designating the
+topic name on which the message was received and the message payload. Here, we call these variables @racket[topic] and
+@racket[payload] and display them.
+
+
 
 @codeblock|{
 #lang racket/base
@@ -99,4 +119,3 @@ some other text
                        [#:retained retained boolean? #f])
          void?]|{
 }|
-                       
