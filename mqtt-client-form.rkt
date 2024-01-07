@@ -13,13 +13,13 @@
 (provide mqtt/with-client
          mqtt/with-connection
          mqtt/with-timeout
-         mqtt/with-publish-qos
+         mqtt/with-qos
          mqtt/publish
          mqtt/subscribe
          mqtt/with-message-recv
          mqtt/will
-         qos/c
-         mqtt-version/c)
+         qos?
+         mqtt-version?)
 
 
 (define current-client
@@ -42,11 +42,11 @@
           'mqtt/with-connection
           (format "connect-options must be mqtt/connect-options or #f but was ~a" x))))))
 
-(define current-publish-qos
+(define current-qos
   (make-parameter
    'qos-2
    (lambda (x)
-     (if (qos/c x)
+     (if (qos? x)
          x
          (raise-mqtt-error
           'mqtt/with-qos
@@ -84,7 +84,8 @@
   (current-connect-options #f))
 
 
-(define mqtt/will create-MQTTClient_willOptions)
+(define (mqtt/will topic message #:retained [retained #f])
+  (create-MQTTClient_willOptions topic message retained (current-qos)))
 
 (define-syntax (mqtt/with-client stx)
   (syntax-parse stx
@@ -123,10 +124,14 @@
             'mqtt/with-connection
             "mqtt/with-connection must appear in the body of an mqtt/with-client form"))]))
 
-(define-syntax (mqtt/with-publish-qos stx)
+(define-syntax (mqtt/with-qos stx)
   (syntax-parse stx
     [(_ (qos:id) body ...)
-     #'(parameterize ([current-publish-qos 'qos])
+     #'(parameterize ([current-qos 'qos])
+         (void)
+         body ...)]
+    [(_ (qos:expr) body ...)
+     #'(parameterize ([current-qos qos])
          (void)
          body ...)]))
 
@@ -145,7 +150,7 @@
   (define msg
     (create-MQTTClient_message
      payload
-     #:qos      (current-publish-qos)
+     #:qos      (current-qos)
      #:retained retained))
 
   (define dt
@@ -154,8 +159,8 @@
   (MQTTClient_waitForCompletion (current-client) dt (current-timeout)))
 
 
-(define (mqtt/subscribe topic #:qos [qos 'qos-2])
-  (MQTTClient_subscribe (current-client) topic qos))
+(define (mqtt/subscribe topic)
+  (MQTTClient_subscribe (current-client) topic (current-qos)))
 
 
 (define-syntax (mqtt/with-default-message stx)
@@ -178,8 +183,8 @@
                ((current-default-message)))))]))
          
          
-(define qos/c
+(define qos?
   (or/c 'qos-0 'qos-1 'qos-2))
 
-(define mqtt-version/c
+(define mqtt-version?
   (or/c 'mqtt-version-default 'mqtt-version-3-1 'mqtt-version-3-1-1 'mqtt-version-5))

@@ -27,10 +27,9 @@ and a client id, @racket["client1"], for our application.
 Next, we set up a connection to an MQTT message broker using @link[]{mqtt/with-connection}. All connection parameters have
 reasonable default values but, here, we set the keep-alive interval to @racket[20] seconds and request a clean session.
 
-Lastly, we set the QOS for publishing to @racket[qos-1] using @racket[mqtt/with-publish-qos]. Note, the QOS for any message an
-MQTT client receives is determined by the publisher and, thus, needs no parameterization on the client's part.
+Lastly, we set the QOS for publishing and subscribing to @racket[qos-1] using @racket[mqtt/with-publish-qos].
 
-Within these three nested contexts, setting up a client, a connection, and default parameters (here for the QOS), we can
+Within these three nested contexts, setting up a client, a connection, and  QOS, we can
 subscribe to topics, send messages, and wait for messages to be received. Here, we use @racket[mqtt/subscribe] to subscribe to
 the topic @racket["some-topic"]. We use @racket[mqtt/publish] to publish the message @racket["Hello World"]. Finally, we
 receive a message using @racket[mqtt/with-message-recv].
@@ -51,7 +50,7 @@ topic name on which the message was received and the message payload. Here, we c
   (mqtt/with-connection (#:keep-alive-interval 20
                          #:clean-session       #t)
 
-    (mqtt/with-publish-qos (qos-1)
+    (mqtt/with-qos (qos-1)
                            
       (mqtt/subscribe "some-topic")
 
@@ -65,22 +64,48 @@ topic name on which the message was received and the message payload. Here, we c
 
 @section{High-Level API}
 
-@subsection{Contracts}
+The high-level MQTT API can be used to exchange messages via MQTT in a functional style
+where the state of the application is managed in the form of scopes and construction and
+destruction of stateful objects is implicit. This API builds upon the low-level API,
+described below which offers a more imperative style and directly maps to the underlying
+C-based API.
 
-@defthing[qos/c contract?]|{
-}|
+@subsection{Predicates}
 
-@defthing[mqtt-version/c contract?]|{
-}|
+@defproc[#:kind "predicate" (qos? [x any/c]) boolean?]{
+ Predicate identifying a quality of service (QOS). Either one of three symbols: @racket['qos-0],
+ @racket['qos-1], or @racket['qos-2].
+}
 
-@subsection{Context Forms}
+@defproc[#:kind "predicate" (mqtt-version? [x any/c]) boolean?]{
+ Predicate identifying an MQTT version. Either one of four symbols: @racket['mqtt-version-default],
+ @racket['mqtt-version-3-1], @racket['mqtt-version-3-1-1], or @racket['mqtt-version-5].
+}
+
+@subsection{Connections}
+
+This module manages MQTT connections using context forms. A context form is a form consisting of
+a head in which parameters are set and a body that is enriched by a context that adheres to the
+aforementioned parameters.
+
+Two context forms are necessary to create a connection to an MQTT message broker:
+@racket[mqtt/with-client] and @racket[mqtt/with-connection]. Herein, @racket[mqtt/with-client]
+prepares an MQTT client by fixing the message broker URI and the client id.
+@racket[mqtt/with-connection], in turn, configures a concrete connection allowing the user to
+set parameters like the keep-alive interval, or the will.
+
+In addition, there are two optional context forms: @racket[mqtt/with-qos] to set the QOS and
+@racket[mqtt/with-timeout] to set the timeout for publishing and receiving.
 
 @defform[(mqtt/with-client (server-uri client-id) body ...)
          #:contracts ([server-uri string?]
                       [client-id  string?]
-                      [body       any/c])]|{
-some text
-}|
+                      [body       any/c])]{
+ Context form, initializing an MQTT client communicating to a message broker identified by the
+ @racket[server-uri]. The @racket[client-id] is a unique label the client gives itself. The body
+ can be any kind and any number of Racket expressions including an @racket[mqtt/with-connection]
+ context form.
+}
 
 @defform[(mqtt/with-connection (binding ...) body ...)
          #:grammar ([binding
@@ -105,58 +130,74 @@ some text
                       [password              (or/c false? string?)]
                       [connect-timeout       exact-nonnegative-integer?]
                       [retry-interval        exact-nonnegative-integer?]
-                      [mqtt-version          mqtt-version/c]
+                      [mqtt-version          mqtt-version?]
                       [max-inflight-messages exact-integer?]
                       [clean-start           boolean?]
                       [http-proxy            (or/c false? string?)]
                       [https-proxy           (or/c false? string?)]
-                      [body                  any/c])]|{
-some other text
-}|
-
-@defform[(mqtt/with-timeout (timeout) body ...)
-         #:contracts ([timeout exact-positive-integer?]
-                      [body    any/c])]|{
-}|
-
-@defform[(mqtt/with-publish-qos (qos) body ...)
-         #:grammar ([qos
-                     (code:line qos-0)
-                     (code:line qos-1)
-                     (code:line qos-2)])
-         #:contracts ([body any/c])]|{
-}|
-
-@defform[(mqtt/with-message-recv (topic payload) body ...)
-         #:contracts ([topic   string?]
-                      [payload string?]
-                      [body    any/c])]|{
-}|
-
-@subsection{Constructors}
+                      [body                  any/c])]{
+ Context form to set up an MQTT connection. Must be used in the body of a client context
+ created using @racket[mqtt/with-client]. Setting the will requires creating a will object using
+ @racket[mqtt/will].
+}
 
 @defproc[#:kind "constructor"
          (mqtt/will
           [topic   string?]
           [message string?]
-          [#:retained retained boolean? #f]
-          [#:qos qos qos/c 'qos-2])
-         MQTTClient_willOptions?]|{
+          [#:retained retained boolean? #f])
+         MQTTClient_willOptions?]{
+ Constructor to create a will object to be used in the head of a @racket[mqtt/with-connection]
+ context form. The QOS is set to the value defined by @racket[mqtt/with-qos].
+}
 
-}|
+@defform[(mqtt/with-timeout (timeout) body ...)
+         #:contracts ([timeout exact-positive-integer?]
+                      [body    any/c])]{
+ Context form for setting the timeout for sending and receiving operations in milliseconds. If
+ the @racket[mqtt/with-timeout] form is omitted, the timeout defaults to @racket[15000]
+ milliseconds.
+}
 
-@subsection{Procedures}
+@defform[(mqtt/with-qos (qos) body ...)
+         #:grammar ([qos
+                     (code:line qos-0)
+                     (code:line qos-1)
+                     (code:line qos-2)])
+         #:contracts ([body any/c])]{
+ Context form for setting the QOS for publishing. If the @racket[mqtt/with-qos] form is
+ omitted, the QOS defaults to @racket[qos-2].
+}
+
+
+
+@subsection{Publishing}
 
 @defproc[(mqtt/publish [topic string?]
                        [payload string?]
                        [#:retained retained boolean? #f])
-         void?]|{
-}|
+         void?]{
+ Publish a message @racket[payload] to the given @racket[topic]. Optionally, the message can be
+ flagged as retained using the keyword argument @racket[#:retained] which defaults to @racket[#f].
+ The QOS is set to the value defined by @racket[mqtt/with-qos].
+}
 
-@defproc[(mqtt/subscribe [topic string?]
-                         [#:qos qos qos/c 'qos-2]) void?]|{
-}|
+@subsection{Subscriptions}
 
+@defproc[(mqtt/subscribe [topic string?]) void?]{
+ Subscribe the client to the given @racket[topic]. The QOS is set to the value defined by
+ @racket[mqtt/with-qos].
+}
+
+@defform[(mqtt/with-message-recv (topic payload) body ...)
+         #:grammar ([topic
+                     (code:line id)]
+                    [payload
+                     (code:line id)])
+         #:contracts ([body    any/c])]{
+ Context form for receiving a message from the message broker. In the body of the form the variables
+ identified by @racket[topic] and @racket[payload] are defined both having string values.
+}
 
 
 
