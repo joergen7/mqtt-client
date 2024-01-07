@@ -125,7 +125,7 @@ In addition, there are two optional context forms: @racket[mqtt/with-qos] to set
          #:contracts ([keep-alive-interval   exact-nonnegative-integer?]
                       [clean-session         boolean?]
                       [reliable              boolean?]
-                      [will                  (or/c false? MQTTClient_willOptions?)]
+                      [will                  (or/c false? _MQTTClient_willOptions?)]
                       [username              (or/c false? string?)]
                       [password              (or/c false? string?)]
                       [connect-timeout       exact-nonnegative-integer?]
@@ -146,7 +146,7 @@ In addition, there are two optional context forms: @racket[mqtt/with-qos] to set
           [topic   string?]
           [message string?]
           [#:retained retained boolean? #f])
-         MQTTClient_willOptions?]{
+         _MQTTClient_willOptions?]{
  Constructor to create a will object to be used in the head of a @racket[mqtt/with-connection]
  context form. The QOS is set to the value defined by @racket[mqtt/with-qos].
 }
