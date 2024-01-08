@@ -18,8 +18,9 @@
          mqtt/subscribe
          mqtt/with-message-recv
          mqtt/will
-         qos?
-         mqtt-version?)
+         mqtt/qos?
+         mqtt/mqtt-version?
+         mqtt/will?)
 
 
 (define current-client
@@ -46,7 +47,7 @@
   (make-parameter
    'qos-2
    (lambda (x)
-     (if (qos? x)
+     (if (mqtt/qos? x)
          x
          (raise-mqtt-error
           'mqtt/with-qos
@@ -124,14 +125,16 @@
             'mqtt/with-connection
             "mqtt/with-connection must appear in the body of an mqtt/with-client form"))]))
 
+(define (validate-qos qos)
+  (cond
+    [(exact-nonnegative-integer? qos) (validate-qos (string->symbol (format "qos-~a" qos)))]
+    [(mqtt/qos? qos)                       qos]
+    [#t                               (error (format "invalid QOS: ~a" qos))]))
+
 (define-syntax (mqtt/with-qos stx)
   (syntax-parse stx
-    [(_ (qos:id) body ...)
-     #'(parameterize ([current-qos 'qos])
-         (void)
-         body ...)]
     [(_ (qos:expr) body ...)
-     #'(parameterize ([current-qos qos])
+     #'(parameterize ([current-qos (validate-qos qos)])
          (void)
          body ...)]))
 
@@ -183,8 +186,10 @@
                ((current-default-message)))))]))
          
          
-(define qos?
+(define mqtt/qos?
   (or/c 'qos-0 'qos-1 'qos-2))
 
-(define mqtt-version?
+(define mqtt/mqtt-version?
   (or/c 'mqtt-version-default 'mqtt-version-3-1 'mqtt-version-3-1-1 'mqtt-version-5))
+
+(define mqtt/will? MQTTClient_willOptions?)

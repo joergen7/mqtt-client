@@ -15,7 +15,7 @@ This package provides an MQTT client implementation enabling Racket applications
 
 (mqtt/with-client ("localhost" "client1")
 
-  (mqtt/with-qos (qos-1)
+  (mqtt/with-qos ('qos-1)
   
     (mqtt/with-connection (#:keep-alive-interval 20
                            #:clean-session       #t)

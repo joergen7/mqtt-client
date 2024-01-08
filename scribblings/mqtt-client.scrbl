@@ -50,7 +50,7 @@ topic name on which the message was received and the message payload. Here, we c
   (mqtt/with-connection (#:keep-alive-interval 20
                          #:clean-session       #t)
 
-    (mqtt/with-qos (qos-1)
+    (mqtt/with-qos ('qos-1)
                            
       (mqtt/subscribe "some-topic")
 
@@ -72,14 +72,18 @@ C-based API.
 
 @subsection{Predicates}
 
-@defproc[#:kind "predicate" (qos? [x any/c]) boolean?]{
+@defproc[#:kind "predicate" (mqtt/qos? [x any/c]) boolean?]{
  Predicate identifying a quality of service (QOS). Either one of three symbols: @racket['qos-0],
  @racket['qos-1], or @racket['qos-2].
 }
 
-@defproc[#:kind "predicate" (mqtt-version? [x any/c]) boolean?]{
+@defproc[#:kind "predicate" (mqtt/mqtt-version? [x any/c]) boolean?]{
  Predicate identifying an MQTT version. Either one of four symbols: @racket['mqtt-version-default],
  @racket['mqtt-version-3-1], @racket['mqtt-version-3-1-1], or @racket['mqtt-version-5].
+}
+
+@defproc[#:kind "predicate" (mqtt/will? [x any/c]) boolean?]{
+ Predicate identifying a will object created with @racket[mqtt/will].
 }
 
 @subsection{Connections}
@@ -97,14 +101,19 @@ set parameters like the keep-alive interval, or the will.
 In addition, there are two optional context forms: @racket[mqtt/with-qos] to set the QOS and
 @racket[mqtt/with-timeout] to set the timeout for publishing and receiving.
 
-@defform[(mqtt/with-client (server-uri client-id) body ...)
-         #:contracts ([server-uri string?]
-                      [client-id  string?]
-                      [body       any/c])]{
+@defform*[[(mqtt/with-client (server-uri client-id) body ...)
+           (mqtt/with-client (server-uri client-id persist-dir) body ...)]
+         #:contracts ([server-uri  string?]
+                      [client-id   string?]
+                      [persist-dir path-string?]
+                      [body        any/c])]{
  Context form, initializing an MQTT client communicating to a message broker identified by the
  @racket[server-uri]. The @racket[client-id] is a unique label the client gives itself. The body
  can be any kind and any number of Racket expressions including an @racket[mqtt/with-connection]
  context form.
+
+ If @racket[persist-dir] is given, then the client state is persisted in that directory instead
+ of in-memory.
 }
 
 @defform[(mqtt/with-connection (binding ...) body ...)
@@ -125,7 +134,7 @@ In addition, there are two optional context forms: @racket[mqtt/with-qos] to set
          #:contracts ([keep-alive-interval   exact-nonnegative-integer?]
                       [clean-session         boolean?]
                       [reliable              boolean?]
-                      [will                  (or/c false? _MQTTClient_willOptions?)]
+                      [will                  (or/c false? mqtt/will?)]
                       [username              (or/c false? string?)]
                       [password              (or/c false? string?)]
                       [connect-timeout       exact-nonnegative-integer?]
@@ -146,27 +155,25 @@ In addition, there are two optional context forms: @racket[mqtt/with-qos] to set
           [topic   string?]
           [message string?]
           [#:retained retained boolean? #f])
-         _MQTTClient_willOptions?]{
+         mqtt/will?]{
  Constructor to create a will object to be used in the head of a @racket[mqtt/with-connection]
- context form. The QOS is set to the value defined by @racket[mqtt/with-qos].
+ context form. The QOS is set to the value defined with @racket[mqtt/with-qos].
 }
 
 @defform[(mqtt/with-timeout (timeout) body ...)
          #:contracts ([timeout exact-positive-integer?]
                       [body    any/c])]{
- Context form for setting the timeout for sending and receiving operations in milliseconds. If
- the @racket[mqtt/with-timeout] form is omitted, the timeout defaults to @racket[15000]
- milliseconds.
+ Context form for setting the timeout for publishing and receiving operations in milliseconds.
+ Specifically, the expressions @racket[mqtt/publish] and @racket[mqtt/with-message-recv] use
+ this timeout value. If the context form is omitted, the timeout defaults
+ to @racket[15000] milliseconds.
 }
 
 @defform[(mqtt/with-qos (qos) body ...)
-         #:grammar ([qos
-                     (code:line qos-0)
-                     (code:line qos-1)
-                     (code:line qos-2)])
-         #:contracts ([body any/c])]{
+         #:contracts ([qos  (or/c qos? 0 1 2)]
+                      [body any/c])]{
  Context form for setting the QOS for publishing. If the @racket[mqtt/with-qos] form is
- omitted, the QOS defaults to @racket[qos-2].
+ omitted, the QOS defaults to @racket['qos-2].
 }
 
 
@@ -179,13 +186,13 @@ In addition, there are two optional context forms: @racket[mqtt/with-qos] to set
          void?]{
  Publish a message @racket[payload] to the given @racket[topic]. Optionally, the message can be
  flagged as retained using the keyword argument @racket[#:retained] which defaults to @racket[#f].
- The QOS is set to the value defined by @racket[mqtt/with-qos].
+ The QOS is set to the value defined with @racket[mqtt/with-qos].
 }
 
 @subsection{Subscriptions}
 
 @defproc[(mqtt/subscribe [topic string?]) void?]{
- Subscribe the client to the given @racket[topic]. The QOS is set to the value defined by
+ Subscribe the client to the given @racket[topic]. The QOS is set to the value defined with
  @racket[mqtt/with-qos].
 }
 
