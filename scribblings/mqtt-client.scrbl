@@ -62,13 +62,11 @@ topic name on which the message was received and the message payload. Here, we c
 }|
 
 
-@section{High-Level API}
+@section{MQTT API}
 
-The high-level MQTT API can be used to exchange messages via MQTT in a functional style
+The MQTT API can be used to exchange messages via MQTT in a functional style
 where the state of the application is managed in the form of scopes and construction and
-destruction of stateful objects is implicit. This API builds upon the low-level API,
-described below which offers a more imperative style and directly maps to the underlying
-C-based API.
+destruction of stateful objects is implicit.
 
 @subsection{Predicates}
 
@@ -206,7 +204,3 @@ In addition, there are two optional context forms: @racket[mqtt/with-qos] to set
  identified by @racket[topic] and @racket[payload] are defined both having string values.
 }
 
-
-
-
-@section{Low-Level API}
