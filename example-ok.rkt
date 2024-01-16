@@ -6,7 +6,7 @@
 (define server-uri "tcp://localhost:1883")
 (define client-id  "ExampleClientPub")
 (define topic      "MQTT Examples")
-(define payload    "Hello World!")
+(define payload    #"Hello World!")
 (define timeout    10000)
 
 

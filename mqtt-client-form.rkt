@@ -86,7 +86,11 @@
 
 
 (define (mqtt/will topic message #:retained [retained #f])
-  (create-MQTTClient_willOptions topic message retained (current-qos)))
+  (create-MQTTClient_willOptions
+   topic
+   (validate-bytes message "will message")
+   #:retained retained
+   #:qos (current-qos)))
 
 (define-syntax (mqtt/with-client stx)
   (syntax-parse stx
@@ -125,12 +129,6 @@
             'mqtt/with-connection
             "mqtt/with-connection must appear in the body of an mqtt/with-client form"))]))
 
-(define (validate-qos qos)
-  (cond
-    [(exact-nonnegative-integer? qos) (validate-qos (string->symbol (format "qos-~a" qos)))]
-    [(mqtt/qos? qos)                       qos]
-    [#t                               (error (format "invalid QOS: ~a" qos))]))
-
 (define-syntax (mqtt/with-qos stx)
   (syntax-parse stx
     [(_ (qos:expr) body ...)
@@ -152,7 +150,7 @@
 
   (define msg
     (create-MQTTClient_message
-     payload
+     (validate-bytes payload "mqtt/publish")
      #:qos      (current-qos)
      #:retained retained))
 
@@ -185,7 +183,8 @@
                  body ...)
                ((current-default-message)))))]))
          
-         
+;; Predicates
+
 (define mqtt/qos?
   (or/c 'qos-0 'qos-1 'qos-2))
 
@@ -193,3 +192,17 @@
   (or/c 'mqtt-version-default 'mqtt-version-3-1 'mqtt-version-3-1-1 'mqtt-version-5))
 
 (define mqtt/will? MQTTClient_willOptions?)
+
+;; Validators
+
+(define (validate-bytes x name)
+  (cond [(bytes? x)  x]
+        [(string? x) (string->bytes/utf-8 x)]
+        [#t          (error (format "~a must be either bytes or string" name))]))
+
+(define (validate-qos qos)
+  (cond
+    [(exact-nonnegative-integer? qos) (validate-qos (string->symbol (format "qos-~a" qos)))]
+    [(mqtt/qos? qos)                  qos]
+    [#t                               (error (format "invalid QOS: ~a" qos))]))
+

@@ -116,7 +116,7 @@
   ([struct_id      _struct_id]
    [struct_version _int]
    [topicName      _string/utf-8]
-   [message        _string/utf-8]
+   [message        _bytes]
    [retained       _bool]
    [qos            _qos]
    [payload        _payload]))
@@ -238,7 +238,7 @@
   ([struct_id      _struct_id]
    [struct_version _int]
    [payloadlen     _int]
-   [payload        _string/utf-8]
+   [payload        _bytes]
    [qos            _qos]
    [retained       _bool]
    [dup            _bool]
@@ -253,7 +253,7 @@
   (make-MQTTClient_message
    (map char->integer '(#\M #\Q #\T #\M)) ; eyecatcher is fixed
    1                                      ; struct-version is fixed
-   (string-length payload)
+   (bytes-length payload)
    payload
    qos
    retained
@@ -303,7 +303,7 @@
 (define-mqtt-client MQTTClient_publishMessage
   (_fun _MQTTClient-pointer                               ; handle
         _string/utf-8                                     ; topic
-        _MQTTClient_message-pointer                                  ; msg
+        _MQTTClient_message-pointer                       ; msg
         (dt : (_ptr o _MQTTClient_deliveryToken-pointer)) ; dt
         -> (r : _int)
         -> (begin
