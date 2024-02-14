@@ -116,7 +116,7 @@
   ([struct_id      _struct_id]
    [struct_version _int]
    [topicName      _string/utf-8]
-   [message        _bytes]
+   [message        _bytes/nul-terminated]
    [retained       _bool]
    [qos            _qos]
    [payload        _payload]))
