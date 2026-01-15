@@ -328,11 +328,11 @@
   (_fun -> _void))
 
 (define-mqtt-client MQTTClient_receive
-  (_fun _MQTTClient-pointer                        ; handle
-        (topic-name : (_ptr o _string/utf-8))      ; topic name
-        (_ptr o _int)                              ; topic len
+  (_fun _MQTTClient-pointer                                   ; handle
+        (topic-name : (_ptr o _string/utf-8))                 ; topic name
+        (_ptr o _int)                                         ; topic len
         (message : (_ptr o _MQTTClient_message-pointer/null)) ; message
-        _ulong                                     ; timeout
+        _ulong                                                ; timeout
    -> (r : _int)
    -> (begin
         (check r 'mqtt/receive)

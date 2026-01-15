@@ -41,12 +41,20 @@ This package provides an MQTT client implementation enabling Racket applications
 As this MQTT client wraps a library, this library must be present in the environment Racket is running in. E.g., on Ubuntu paho.mqtt.c can be installed by running:
 
     sudo apt-get install -y libpaho-mqtt1.3
+
+On Fedora run
+
+    sudo dnf install paho-c
 	
 ### MQTT Broker
 
 To exchange messages an MQTT broker must be available. [Eclipse Mosquitto](https://mosquitto.org/) is a popular MQTT broker. To install Eclipse Mosquitto on Ubuntu run:
 
     sudo apt-get install -y mosquitto
+
+On Fedora run
+
+    sudo dnf install mosquitto
    
 Verify the broker service is running be entering:
 
