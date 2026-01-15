@@ -13,6 +13,7 @@
   ffi/unsafe/alloc
 
   (only-in racket/match
+           match
            define/match))
 
 
@@ -334,9 +335,10 @@
         (message : (_ptr o _MQTTClient_message-pointer/null)) ; message
         _ulong                                                ; timeout
    -> (r : _int)
-   -> (begin
-        (check r 'mqtt/receive)
-        (values message topic-name))))
+   -> (match r
+        [0  (values message topic-name)]
+        [-1 (values #f #f)]
+        [_  (check r 'mqtt/receive)])))
   
 
 

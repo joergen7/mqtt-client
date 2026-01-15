@@ -55,7 +55,7 @@
 
 (define current-timeout
   (make-parameter
-   15000
+   4000
    (lambda (x)
      (if (exact-positive-integer? x)
          x
@@ -177,11 +177,11 @@
     [(_ (topic payload) body ...)
      (let ([x (gensym)])
        #`(let-values ([(#,x topic) (MQTTClient_receive (current-client) (current-timeout))])
-           (if #,x
-               (let ([payload (MQTTClient_message-payload #,x)])
-                 (void)
-                 body ...)
-               ((current-default-message)))))]))
+           (let ([payload (if #,x
+                              (MQTTClient_message-payload #,x)
+                              ((current-default-message)))])
+             (void)
+             body ...)))]))
          
 ;; Predicates
 
